@@ -55,6 +55,17 @@ class Settings(BaseSettings):
     RUB_PRICE_6_MONTHS: Optional[int] = Field(default=None)
     RUB_PRICE_12_MONTHS: Optional[int] = Field(default=None)
 
+    # Exclusive pricing configuration
+    EXCLUSIVE_USER_IDS_STR: str = Field(
+        default="",
+        alias="EXCLUSIVE_USER_IDS",
+        description="Comma-separated list of Telegram user IDs with exclusive prices",
+    )
+    RUB_PRICE_1_MONTH_EXCLUSIVE: Optional[int] = Field(default=None)
+    RUB_PRICE_3_MONTHS_EXCLUSIVE: Optional[int] = Field(default=None)
+    RUB_PRICE_6_MONTHS_EXCLUSIVE: Optional[int] = Field(default=None)
+    RUB_PRICE_12_MONTHS_EXCLUSIVE: Optional[int] = Field(default=None)
+
     STARS_PRICE_1_MONTH: Optional[int] = Field(default=None)
     STARS_PRICE_3_MONTHS: Optional[int] = Field(default=None)
     STARS_PRICE_6_MONTHS: Optional[int] = Field(default=None)
@@ -116,7 +127,7 @@ class Settings(BaseSettings):
     WEB_SERVER_PORT: int = Field(default=8080)
     LOGS_PAGE_SIZE: int = Field(default=10)
 
-    SUBSCRIPTION_MINI_APP_URL: Optional[str] = Field(default=None)
+    SUBSCRIPTION_BASE_URL: Optional[str] = Field(default=None, alias="SUBSCRIPTION_MINI_APP_URL", description="Base URL for dynamic subscription links")
 
     START_COMMAND_DESCRIPTION: Optional[str] = Field(default=None)
     DISABLE_WELCOME_MESSAGE: bool = Field(default=False, description="Disable welcome message on /start command")
@@ -154,6 +165,23 @@ class Settings(BaseSettings):
     def PRIMARY_ADMIN_ID(self) -> Optional[int]:
         ids = self.ADMIN_IDS
         return ids[0] if ids else None
+
+    @computed_field
+    @property
+    def EXCLUSIVE_USER_IDS(self) -> List[int]:
+        if self.EXCLUSIVE_USER_IDS_STR:
+            try:
+                return [
+                    int(user_id.strip())
+                    for user_id in self.EXCLUSIVE_USER_IDS_STR.split(',')
+                    if user_id.strip().isdigit()
+                ]
+            except ValueError:
+                logging.error(
+                    f"Invalid EXCLUSIVE_USER_IDS format: '{self.EXCLUSIVE_USER_IDS_STR}'. Expected comma-separated integers."
+                )
+                return []
+        return []
 
     @computed_field
     @property
@@ -246,6 +274,42 @@ class Settings(BaseSettings):
             options[6] = float(self.RUB_PRICE_6_MONTHS)
         if self.MONTH_12_ENABLED and self.RUB_PRICE_12_MONTHS is not None:
             options[12] = float(self.RUB_PRICE_12_MONTHS)
+        return options
+
+    # --- Exclusive pricing helpers (runtime methods) ---
+    def is_exclusive_user(self, user_id: int) -> bool:
+        try:
+            return int(user_id) in self.EXCLUSIVE_USER_IDS
+        except Exception:
+            return False
+
+    def get_rub_price_for_user(self, user_id: int, months: int) -> Optional[float]:
+        if self.is_exclusive_user(user_id):
+            if months == 1 and self.RUB_PRICE_1_MONTH_EXCLUSIVE is not None:
+                return float(self.RUB_PRICE_1_MONTH_EXCLUSIVE)
+            if months == 3 and self.RUB_PRICE_3_MONTHS_EXCLUSIVE is not None:
+                return float(self.RUB_PRICE_3_MONTHS_EXCLUSIVE)
+            if months == 6 and self.RUB_PRICE_6_MONTHS_EXCLUSIVE is not None:
+                return float(self.RUB_PRICE_6_MONTHS_EXCLUSIVE)
+            if months == 12 and self.RUB_PRICE_12_MONTHS_EXCLUSIVE is not None:
+                return float(self.RUB_PRICE_12_MONTHS_EXCLUSIVE)
+        return self.subscription_options.get(months)
+
+    def subscription_options_for_user(self, user_id: int) -> Dict[int, float]:
+        # Build per-user options, respecting enabled flags and available prices
+        options: Dict[int, float] = {}
+        for months in (1, 3, 6, 12):
+            flag = {
+                1: self.MONTH_1_ENABLED,
+                3: self.MONTH_3_ENABLED,
+                6: self.MONTH_6_ENABLED,
+                12: self.MONTH_12_ENABLED,
+            }.get(months, False)
+            if not flag:
+                continue
+            price = self.get_rub_price_for_user(user_id, months)
+            if price is not None:
+                options[months] = price
         return options
 
     @computed_field

@@ -115,12 +115,27 @@ async def request_trial_confirmation_handler(
         ):
             show_trial_button_after_action = True
 
+    # Build dynamic subscription URL when possible: base + '/' + ShortUuid
+    dynamic_subscription_url = None
+    try:
+        if settings.SUBSCRIPTION_BASE_URL:
+            short_uuid = await subscription_service.get_or_create_user_short_uuid(
+                session, user_id
+            )
+            if short_uuid:
+                base_url = settings.SUBSCRIPTION_BASE_URL.rstrip("/")
+                dynamic_subscription_url = f"{base_url}/{short_uuid}"
+    except Exception as e_url:
+        logging.warning(
+            f"Failed to construct dynamic subscription URL for user {user_id}: {e_url}"
+        )
+
     try:
         await callback.message.edit_text(
             final_message_text_in_chat,
             parse_mode="HTML",
             reply_markup=get_main_menu_inline_keyboard(
-                current_lang, i18n, settings, show_trial_button_after_action
+                current_lang, i18n, settings, show_trial_button_after_action, dynamic_subscription_url
             ),
             disable_web_page_preview=True,
         )
@@ -138,7 +153,7 @@ async def request_trial_confirmation_handler(
                 final_message_text_in_chat,
                 parse_mode="HTML",
                 reply_markup=get_main_menu_inline_keyboard(
-                    current_lang, i18n, settings, show_trial_button_after_action
+                    current_lang, i18n, settings, show_trial_button_after_action, dynamic_subscription_url
                 ),
                 disable_web_page_preview=True,
             )
@@ -230,12 +245,27 @@ async def confirm_activate_trial_handler(
         ):
             show_trial_button_after_action = True
 
+    # Build dynamic subscription URL when possible: base + '/' + ShortUuid
+    dynamic_subscription_url = None
+    try:
+        if settings.SUBSCRIPTION_BASE_URL:
+            short_uuid = await subscription_service.get_or_create_user_short_uuid(
+                session, user_id
+            )
+            if short_uuid:
+                base_url = settings.SUBSCRIPTION_BASE_URL.rstrip("/")
+                dynamic_subscription_url = f"{base_url}/{short_uuid}"
+    except Exception as e_url:
+        logging.warning(
+            f"Failed to construct dynamic subscription URL for user {user_id}: {e_url}"
+        )
+
     try:
         await callback.message.edit_text(
             final_message_text_in_chat,
             parse_mode="HTML",
             reply_markup=get_main_menu_inline_keyboard(
-                current_lang, i18n, settings, show_trial_button_after_action
+                current_lang, i18n, settings, show_trial_button_after_action, dynamic_subscription_url
             ),
             disable_web_page_preview=True,
         )
@@ -253,7 +283,7 @@ async def confirm_activate_trial_handler(
                 final_message_text_in_chat,
                 parse_mode="HTML",
                 reply_markup=get_main_menu_inline_keyboard(
-                    current_lang, i18n, settings, show_trial_button_after_action
+                    current_lang, i18n, settings, show_trial_button_after_action, dynamic_subscription_url
                 ),
                 disable_web_page_preview=True,
             )

@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict, Any, Optional
 
 from aiogram import Bot, Dispatcher
-from aiogram.types import (MenuButtonDefault, MenuButtonWebApp, WebAppInfo, BotCommand)
+from aiogram.types import (MenuButtonDefault, BotCommand)
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -39,7 +39,7 @@ from bot.services.crypto_pay_service import CryptoPayService, cryptopay_webhook_
 from bot.handlers.user import payment as user_payment_webhook_module
 from bot.handlers.admin.sync_admin import perform_sync
 from bot.utils.message_queue import init_queue_manager
-
+from bot.utils.message_patch import patch_edit_message
 
 async def register_all_routers(dp: Dispatcher, settings: Settings):
     dp.include_router(build_root_router(settings))
@@ -112,26 +112,8 @@ async def on_startup_configured(dispatcher: Dispatcher):
         )
         raise SystemExit("WEBHOOK_BASE_URL is required. Polling mode is disabled.")
 
-    if settings.SUBSCRIPTION_MINI_APP_URL:
-        try:
-            menu_text = i18n_instance.gettext(
-                settings.DEFAULT_LANGUAGE,
-                "menu_my_subscription_inline",
-            )
-            await bot.set_chat_menu_button(
-                menu_button=MenuButtonWebApp(
-                    text=menu_text,
-                    web_app=WebAppInfo(url=settings.SUBSCRIPTION_MINI_APP_URL),
-                )
-            )
-            await bot.set_chat_menu_button(menu_button=MenuButtonDefault())
-            logging.info(
-                "STARTUP: Mini app domain registered and default menu button restored."
-            )
-        except Exception as e:
-            logging.error(
-                f"STARTUP: Failed to register mini app domain: {e}", exc_info=True
-            )
+    # Mini app functionality removed - using dynamic subscription URLs instead
+    logging.info("STARTUP: Mini app functionality disabled - using dynamic subscription URLs")
 
     if settings.START_COMMAND_DESCRIPTION:
         try:
@@ -228,6 +210,9 @@ async def on_shutdown_configured(dispatcher: Dispatcher):
 
 
 async def run_bot(settings_param: Settings):
+    # Ensure editing a message results in deleting the old one and sending a new
+    patch_edit_message()
+    
     local_async_session_factory = init_db_connection(settings_param)
     if local_async_session_factory is None:
         logging.critical(

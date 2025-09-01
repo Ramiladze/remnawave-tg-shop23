@@ -102,6 +102,7 @@ class Payment(Base):
     promo_code_id = Column(Integer,
                            ForeignKey("promo_codes.promo_code_id"),
                            nullable=True)
+    invoice_message_id = Column(BigInteger, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True),
                         onupdate=func.now(),

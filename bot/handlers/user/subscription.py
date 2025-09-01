@@ -40,14 +40,27 @@ async def display_subscription_options(event: Union[types.Message,
             await event.answer(err_msg)
         return
 
+    # Get user_id from event
+    user_id = event.from_user.id if hasattr(event, 'from_user') else None
+    if not user_id:
+        err_msg = "User ID not found."
+        if isinstance(event, types.CallbackQuery):
+            await event.answer(err_msg, show_alert=True)
+        elif isinstance(event, types.Message):
+            await event.answer(err_msg)
+        return
+
+    # Get user-specific subscription options
+    user_subscription_options = settings.subscription_options_for_user(user_id)
+    
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
     text_content = get_text("select_subscription_period"
-                            ) if settings.subscription_options else get_text(
+                            ) if user_subscription_options else get_text(
                                 "no_subscription_options_available")
 
     reply_markup = get_subscription_options_keyboard(
-        settings.subscription_options, currency_symbol_val, current_lang, i18n
-    ) if settings.subscription_options else get_back_to_main_menu_markup(
+        user_subscription_options, currency_symbol_val, current_lang, i18n
+    ) if user_subscription_options else get_back_to_main_menu_markup(
         current_lang, i18n)
 
     target_message_obj = event.message if isinstance(
@@ -93,10 +106,12 @@ async def select_subscription_period_callback_handler(
         await callback.answer(get_text("error_try_again"), show_alert=True)
         return
 
-    price_rub = settings.subscription_options.get(months)
+    # Get user-specific price
+    user_id = callback.from_user.id
+    price_rub = settings.get_rub_price_for_user(user_id, months)
     if price_rub is None:
         logging.error(
-            f"Price not found for {months} months subscription period in settings.subscription_options."
+            f"Price not found for {months} months subscription period for user {user_id}."
         )
         await callback.answer(get_text("error_try_again"), show_alert=True)
         return
@@ -270,11 +285,23 @@ async def pay_yk_callback_handler(
             await callback.answer(get_text("error_try_again"), show_alert=True)
             return
 
-        await callback.message.edit_text(
+        # Send invoice message and save its ID
+        invoice_message = await callback.message.edit_text(
             get_text(key="payment_link_message", months=months),
             reply_markup=get_payment_url_keyboard(
                 payment_response_yk["confirmation_url"], current_lang, i18n),
             disable_web_page_preview=False)
+        
+        # Save invoice message ID to database
+        try:
+            await payment_dal.update_invoice_message_id(
+                session, db_payment_record.payment_id, invoice_message.message_id)
+            await session.commit()
+        except Exception as e_save_msg_id:
+            await session.rollback()
+            logging.error(
+                f"Failed to save invoice message_id {invoice_message.message_id} for payment {db_payment_record.payment_id}: {e_save_msg_id}",
+                exc_info=True)
     else:
         try:
             await payment_dal.update_payment_status_by_db_id(

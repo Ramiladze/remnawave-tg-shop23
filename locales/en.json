@@ -155,10 +155,6 @@
 
   "admin_broadcast_enter_message": "Enter the broadcast message (HTML supported):",
   "admin_broadcast_confirm_prompt": "You are about to send the following message:\n\n{message_preview}\n\nConfirm sending?",
-  "admin_broadcast_confirm_prompt_short": "The message above will be sent. Confirm?",
-  "broadcast_target_all_button": "👥 All",
-  "broadcast_target_active_button": "✅ Active",
-  "broadcast_target_inactive_button": "⌛ Inactive",
   "confirm_broadcast_send_button": "✅ Send",
   "cancel_broadcast_button": "❌ Cancel",
   "admin_broadcast_sending_started": "Starting broadcast...",
@@ -518,10 +514,5 @@
   "admin_financial_week_label": "This week",
   "admin_financial_month_label": "This month",
   "admin_financial_all_time_label": "All time",
-  "admin_financial_payments_label": "payments",
-
-  "admin_sync_details": "📊 Synchronization Statistics:\n🔍 Panel records checked: {panel_records_checked}\n👥 Users found in DB: {users_found_in_db}\n✨ New users created: {users_created}\n🔄 Users updated: {users_updated}\n📋 Subscriptions synced: {subscriptions_synced_count}\n   ├── Created new: {subscriptions_created}\n   └── Updated existing: {subscriptions_updated}{additional_stats}",
-  "admin_sync_no_telegram_id": "\n⚠️ Records without telegramId: {count}",
-  "admin_sync_not_found_in_db": "\n❌ Not found in DB: {count}",
-  "admin_sync_errors": "\n🚫 Errors: {count}"
+  "admin_financial_payments_label": "payments"
 }

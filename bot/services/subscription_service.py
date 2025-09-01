@@ -279,6 +279,26 @@ class SubscriptionService:
             panel_user_created_or_linked_now,
         )
 
+    async def get_or_create_user_short_uuid(
+        self, session: AsyncSession, user_id: int
+    ) -> Optional[str]:
+        """Return user's panel short UUID, creating/linking panel user if needed.
+
+        This is a thin public wrapper over the internal linkage helper, intended
+        for UI flows that need to construct a user-specific subscription URL.
+        """
+        try:
+            _, _panel_sub_link_id, panel_short_uuid, _ = (
+                await self._get_or_create_panel_user_link_details(session, user_id)
+            )
+            return panel_short_uuid or _panel_sub_link_id
+        except Exception as e:
+            logging.error(
+                f"Failed to obtain short UUID for user {user_id}: {type(e).__name__} - {e}",
+                exc_info=True,
+            )
+            return None
+
     async def activate_trial_subscription(
         self, session: AsyncSession, user_id: int
     ) -> Optional[Dict[str, Any]]:

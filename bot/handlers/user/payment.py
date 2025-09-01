@@ -184,6 +184,19 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
             )
             details_message = _("payment_successful_error_details")
 
+        # Delete invoice message if it exists
+        try:
+            payment_record = await payment_dal.get_payment_by_db_id(session, payment_db_id)
+            if payment_record and payment_record.invoice_message_id:
+                try:
+                    await bot.delete_message(chat_id=user_id, message_id=payment_record.invoice_message_id)
+                    logging.info(f"Deleted invoice message {payment_record.invoice_message_id} for user {user_id}")
+                except Exception as e_delete:
+                    # Message might already be deleted or not accessible
+                    logging.debug(f"Failed to delete invoice message {payment_record.invoice_message_id} for user {user_id}: {e_delete}")
+        except Exception as e_get_payment:
+            logging.error(f"Failed to get payment record for invoice deletion: {e_get_payment}")
+
         details_markup = get_connect_and_main_keyboard(
             user_lang, i18n, settings, config_link
         )
@@ -259,6 +272,19 @@ async def process_cancelled_payment(session: AsyncSession, bot: Bot,
             logging.warning(
                 f"Could not find payment record {payment_db_id} to update status to cancelled for user {user_id}."
             )
+
+        # Delete invoice message if it exists
+        try:
+            payment_record = await payment_dal.get_payment_by_db_id(session, payment_db_id)
+            if payment_record and payment_record.invoice_message_id:
+                try:
+                    await bot.delete_message(chat_id=user_id, message_id=payment_record.invoice_message_id)
+                    logging.info(f"Deleted invoice message {payment_record.invoice_message_id} for cancelled payment, user {user_id}")
+                except Exception as e_delete:
+                    # Message might already be deleted or not accessible
+                    logging.debug(f"Failed to delete invoice message {payment_record.invoice_message_id} for cancelled payment, user {user_id}: {e_delete}")
+        except Exception as e_get_payment:
+            logging.error(f"Failed to get payment record for invoice deletion on cancel: {e_get_payment}")
 
         db_user = await user_dal.get_user_by_id(session, user_id)
         user_lang = settings.DEFAULT_LANGUAGE

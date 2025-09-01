@@ -175,6 +175,25 @@ async def update_provider_payment_and_status(
     return payment
 
 
+async def update_invoice_message_id(
+        session: AsyncSession, payment_db_id: int, message_id: int) -> Optional[Payment]:
+    """Update invoice_message_id for a payment record."""
+    payment = await get_payment_by_db_id(session, payment_db_id)
+    if payment:
+        payment.invoice_message_id = message_id
+        payment.updated_at = func.now()
+        await session.flush()
+        await session.refresh(payment)
+        logging.info(
+            f"Payment record {payment.payment_id} updated with invoice message_id {message_id}."
+        )
+    else:
+        logging.warning(
+            f"Payment record with DB ID {payment_db_id} not found for invoice message_id update."
+        )
+    return payment
+
+
 async def get_financial_statistics(session: AsyncSession) -> Dict[str, Any]:
     """Get comprehensive financial statistics."""
     from datetime import datetime, timedelta

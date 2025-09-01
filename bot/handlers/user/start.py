@@ -66,8 +66,29 @@ async def send_main_menu(target_event: Union[types.Message,
             )
 
     text = _(key="main_menu_greeting", user_name=user_full_name)
-    reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings,
-                                                 show_trial_button_in_menu)
+
+    # Build dynamic subscription URL when possible: base + '/' + ShortUuid
+    dynamic_subscription_url = None
+    try:
+        if settings.SUBSCRIPTION_BASE_URL:
+            short_uuid = await subscription_service.get_or_create_user_short_uuid(
+                session, user_id
+            )
+            if short_uuid:
+                base_url = settings.SUBSCRIPTION_BASE_URL.rstrip("/")
+                dynamic_subscription_url = f"{base_url}/{short_uuid}"
+    except Exception as e_url:
+        logging.warning(
+            f"Failed to construct dynamic subscription URL for user {user_id}: {e_url}"
+        )
+
+    reply_markup = get_main_menu_inline_keyboard(
+        current_lang,
+        i18n,
+        settings,
+        show_trial_button_in_menu,
+        dynamic_subscription_url,
+    )
 
     target_message_obj: Optional[types.Message] = None
     if isinstance(target_event, types.Message):

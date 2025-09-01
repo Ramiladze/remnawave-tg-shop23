@@ -1,5 +1,5 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
-from aiogram.types import InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import InlineKeyboardMarkup
 from typing import Dict, Optional, List
 
 from config.settings import Settings
@@ -9,7 +9,8 @@ def get_main_menu_inline_keyboard(
         lang: str,
         i18n_instance,
         settings: Settings,
-        show_trial_button: bool = False) -> InlineKeyboardMarkup:
+        show_trial_button: bool = False,
+        subscription_url: Optional[str] = None) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
 
@@ -21,11 +22,11 @@ def get_main_menu_inline_keyboard(
     builder.row(
         InlineKeyboardButton(text=_(key="menu_subscribe_inline"),
                              callback_data="main_action:subscribe"))
-    if settings.SUBSCRIPTION_MINI_APP_URL:
+    if subscription_url:
         builder.row(
             InlineKeyboardButton(
                 text=_(key="menu_my_subscription_inline"),
-                web_app=WebAppInfo(url=settings.SUBSCRIPTION_MINI_APP_URL),
+                url=subscription_url,
             )
         )
     else:
@@ -44,19 +45,19 @@ def get_main_menu_inline_keyboard(
         callback_data="main_action:apply_promo")
     builder.row(referral_button, promo_button)
 
-    language_button = InlineKeyboardButton(
-        text=_(key="menu_language_settings_inline"),
-        callback_data="main_action:language")
+    # language_button = InlineKeyboardButton(
+    #     text=_(key="menu_language_settings_inline"),
+    #     callback_data="main_action:language")
     status_button_list = []
     if settings.SERVER_STATUS_URL:
         status_button_list.append(
             InlineKeyboardButton(text=_(key="menu_server_status_button"),
                                  url=settings.SERVER_STATUS_URL))
 
-    if status_button_list:
-        builder.row(language_button, *status_button_list)
-    else:
-        builder.row(language_button)
+    # if status_button_list:
+    #     builder.row(language_button, *status_button_list)
+    # else:
+    #     builder.row(language_button)
 
     if settings.SUPPORT_LINK:
         builder.row(
@@ -112,7 +113,7 @@ def get_subscription_options_keyboard(subscription_options: Dict[
                                 currency_symbol=currency_symbol_val)
                 builder.button(text=button_text,
                                callback_data=f"subscribe_period:{months}")
-        builder.adjust(1)
+        builder.adjust(2)
     builder.row(
         InlineKeyboardButton(text=_(key="back_to_main_menu_button"),
                              callback_data="main_action:back_to_main"))
@@ -202,14 +203,7 @@ def get_connect_and_main_keyboard(
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
 
-    if settings.SUBSCRIPTION_MINI_APP_URL:
-        builder.row(
-            InlineKeyboardButton(
-                text=_("connect_button"),
-                web_app=WebAppInfo(url=settings.SUBSCRIPTION_MINI_APP_URL),
-            )
-        )
-    elif config_link:
+    if config_link:
         builder.row(
             InlineKeyboardButton(text=_("connect_button"), url=config_link)
         )
